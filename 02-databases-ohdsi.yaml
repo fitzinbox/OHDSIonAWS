@@ -1,9 +1,9 @@
 # Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License. 
+# Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License.
 # A copy of the License is located at
 #    http://aws.amazon.com/apache2.0/
-# or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+# or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
 # either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
 
@@ -50,11 +50,11 @@ Parameters:
       - dc1.large
     Default: dc2.large
   NumRedshiftNodes:
-    AllowedPattern: ^((?!0$)[1-2]?[0-9]|32)$
+  #  AllowedPattern: ^((?!0$)[1-2]?[0-9]|32)$
     ConstraintDescription: Must be a number between 1 and 32.
     Default: 1
     Description: Specifies the  number of nodes in your Redshift cluster.
-    Type: String  
+    Type: Number
   SubnetDataA:
     Type: AWS::EC2::Subnet::Id
   SubnetDataB:
@@ -66,12 +66,12 @@ Parameters:
 
 
 Conditions:
-  DeployMultiAZDB: 
-    !Equals [ "Highly Available", !Ref DatabaseType ] 
+  DeployMultiAZDB:
+    !Equals [ "Highly Available", !Ref DatabaseType ]
   SingleNodeRedshift:
-    !Equals [ '1', !Ref NumRedshiftNodes ]
+    !Equals [ 1, !Ref NumRedshiftNodes ]
   MultiNodeRedshift:
-    !Not [ !Equals [ '1', !Ref NumRedshiftNodes ] ]
+    !Not [ !Equals [ 1, !Ref NumRedshiftNodes ] ]
   Serverless:
     !Equals [ "Serverless", !Ref DatabaseType ]
   NotServerless:
@@ -109,7 +109,7 @@ Resources:
         Ref: RDSCluster
       PubliclyAccessible: 'false'
       DBInstanceClass: !Ref DatabaseInstanceType
-# Only create the second instance if the user specified a Multi-AZ Database  
+# Only create the second instance if the user specified a Multi-AZ Database
   RDSDBInstance2:
     Condition: DeployMultiAZDB
     Type: AWS::RDS::DBInstance
@@ -147,7 +147,7 @@ Resources:
         - !Ref SubnetDataB
 
 
-  RedshiftCluster: 
+  RedshiftCluster:
     Type: "AWS::Redshift::Cluster"
     Properties:
       DBName: "mycdm"
@@ -155,13 +155,13 @@ Resources:
       MasterUserPassword: !Ref DatabaseMasterPassword
       NodeType: !Ref RedshiftInstanceType
       ClusterType: !If [ MultiNodeRedshift, "multi-node", "single-node" ]
-      NumberOfNodes: !If [ MultiNodeRedshift, !Ref NumRedshiftNodes, "" ]
+      NumberOfNodes: 1
       Encrypted: "True"
       PubliclyAccessible: "False"
       ClusterParameterGroupName: !Ref RedshiftClusterParameterGroup
-      IamRoles: 
+      IamRoles:
         - !Ref RSRoleArn
-      VpcSecurityGroupIds: 
+      VpcSecurityGroupIds:
         - !Ref SGData
       ClusterSubnetGroupName:
         Ref: RedshiftSubnetGroup
@@ -171,20 +171,20 @@ Resources:
       Description: "Redshift Security Groups"
       SubnetIds:
         - !Ref SubnetDataA
-  RedshiftClusterParameterGroup: 
+  RedshiftClusterParameterGroup:
     Type: "AWS::Redshift::ClusterParameterGroup"
-    Properties: 
+    Properties:
       Description: "My parameter group"
       ParameterGroupFamily: "redshift-1.0"
-      Parameters: 
-        - 
+      Parameters:
+        -
           ParameterName: "require_ssl"
           ParameterValue: "true"
           ParameterName: "statement_timeout"
           ParameterValue: "3600000"
 
 Outputs:
-  RDSEndpoint: 
-    Value: !GetAtt RDSCluster.Endpoint.Address 
-  RedshiftEndpoint: 
-    Value: !GetAtt RedshiftCluster.Endpoint.Address 
+  RDSEndpoint:
+    Value: !GetAtt RDSCluster.Endpoint.Address
+  RedshiftEndpoint:
+    Value: !GetAtt RedshiftCluster.Endpoint.Address
